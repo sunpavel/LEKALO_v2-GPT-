@@ -1,0 +1,8 @@
+{
+  "name": "lekalo-v2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LEKALO private architecture landing page",
+  "scripts": {"start": "node server.js"},
+  "engines": {"node": ">=18"}
+}
