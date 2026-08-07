@@ -22,12 +22,21 @@ function send(res, status, body, type) {
   res.end(body);
 }
 
+function safePathname(rawUrl) {
+  try {
+    return decodeURIComponent(rawUrl);
+  } catch {
+    return null;
+  }
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (url.pathname === '/health') return send(res, 200, 'ok', 'text/plain; charset=utf-8');
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method Not Allowed', 'text/plain; charset=utf-8');
 
-  const requested = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
+  const requested = safePathname(url.pathname === '/' ? '/index.html' : url.pathname);
+  if (!requested || requested.includes('\0')) return send(res, 400, 'Bad Request', 'text/plain; charset=utf-8');
   const file = path.resolve(root, `.${requested}`);
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     return send(res, 404, 'Not Found', 'text/plain; charset=utf-8');
