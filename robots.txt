@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lklo.ru/sitemap.xml
+Host: lklo.ru

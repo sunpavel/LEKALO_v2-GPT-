@@ -14,7 +14,9 @@ const types = {
   '.jpeg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
-  '.md': 'text/plain; charset=utf-8'
+  '.md': 'text/plain; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8'
 };
 
 const googleTagHead = `  <!-- Google tag (gtag.js) -->
@@ -56,12 +58,14 @@ function ensureAnalytics(html) {
   return result;
 }
 
-function send(res, status, body, type) {
+function send(res, status, body, type, cacheControl = 'no-store') {
   const payload = Buffer.isBuffer(body) ? body : Buffer.from(body, 'utf8');
   res.writeHead(status, {
     'Content-Type': type,
     'Content-Length': String(payload.length),
-    'Cache-Control': 'no-store, max-age=0'
+    'Cache-Control': cacheControl,
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   });
   if (res.req.method === 'HEAD') return res.end();
   res.end(payload);
@@ -80,11 +84,22 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/health') return send(res, 200, 'ok', 'text/plain; charset=utf-8');
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method Not Allowed', 'text/plain; charset=utf-8');
 
+  const hostname = String(req.headers.host || '').split(':')[0].toLowerCase();
+  if (hostname === 'www.lklo.ru') {
+    res.writeHead(301, {Location: `https://lklo.ru${url.pathname}${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/index.html') {
+    res.writeHead(301, {Location: `/${url.search}`});
+    return res.end();
+  }
+
   const requested = safePathname(url.pathname === '/' ? '/index.html' : url.pathname);
   if (!requested || requested.includes('\0')) return send(res, 400, 'Bad Request', 'text/plain; charset=utf-8');
   const file = path.resolve(root, `.${requested}`);
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
-    return send(res, 404, 'Not Found', 'text/plain; charset=utf-8');
+    const notFound = fs.readFileSync(path.join(root, '404.html'));
+    return send(res, 404, notFound, types['.html']);
   }
   const type = types[path.extname(file).toLowerCase()] || 'application/octet-stream';
   const source = fs.readFileSync(file);
@@ -94,7 +109,11 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, {
     'Content-Type': type,
     'Content-Length': String(payload.length),
-    'Cache-Control': 'no-store, max-age=0'
+    'Cache-Control': path.extname(file).toLowerCase() === '.html'
+      ? 'public, max-age=0, must-revalidate'
+      : 'public, max-age=604800, stale-while-revalidate=86400',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   });
   if (req.method === 'HEAD') return res.end();
   res.end(payload);
