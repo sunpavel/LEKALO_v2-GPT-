@@ -12,6 +12,7 @@ const types = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.md': 'text/plain; charset=utf-8',
@@ -111,6 +112,22 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/stroitelnyy-kontrol') {
     res.writeHead(301, {Location: `/stroitelnyy-kontrol/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/proekty') {
+    res.writeHead(301, {Location: `/proekty/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/proekty/rezidentsiya-s-basseynom') {
+    res.writeHead(301, {Location: `/proekty/rezidentsiya-s-basseynom/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/proekty/interer-zagorodnogo-doma') {
+    res.writeHead(301, {Location: `/proekty/interer-zagorodnogo-doma/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/proekty/dom-v-lesu') {
+    res.writeHead(301, {Location: `/proekty/dom-v-lesu/${url.search}`});
     return res.end();
   }
 
