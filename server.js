@@ -17,6 +17,28 @@ const types = {
   '.md': 'text/plain; charset=utf-8'
 };
 
+const metrikaHead = `  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+      m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i].l=1*new Date();
+      for (var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
+      k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window,document,'script','https://mc.yandex.ru/metrika/tag.js?id=111410117','ym');
+
+    ym(111410117,'init',{ssr:true,webvisor:true,clickmap:true,ecommerce:'dataLayer',referrer:document.referrer,url:location.href,accurateTrackBounce:true,trackLinks:true});
+  </script>
+  <!-- /Yandex.Metrika counter -->`;
+const metrikaNoScript = '  <noscript><div><img src="https://mc.yandex.ru/watch/111410117" style="position:absolute;left:-9999px" alt=""></div></noscript>';
+
+function ensureMetrika(html) {
+  if (html.includes('mc.yandex.ru/metrika/tag.js?id=111410117')) return html;
+
+  let result = html.replace(/<head([^>]*)>/i, `<head$1>\n${metrikaHead}`);
+  result = result.replace(/<body([^>]*)>/i, `<body$1>\n${metrikaNoScript}`);
+  return result;
+}
+
 function send(res, status, body, type) {
   const payload = Buffer.isBuffer(body) ? body : Buffer.from(body, 'utf8');
   res.writeHead(status, {
@@ -48,7 +70,10 @@ const server = http.createServer((req, res) => {
     return send(res, 404, 'Not Found', 'text/plain; charset=utf-8');
   }
   const type = types[path.extname(file).toLowerCase()] || 'application/octet-stream';
-  const payload = fs.readFileSync(file);
+  const source = fs.readFileSync(file);
+  const payload = path.extname(file).toLowerCase() === '.html'
+    ? Buffer.from(ensureMetrika(source.toString('utf8')), 'utf8')
+    : source;
   res.writeHead(200, {
     'Content-Type': type,
     'Content-Length': String(payload.length),
