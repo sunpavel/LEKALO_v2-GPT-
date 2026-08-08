@@ -103,13 +103,14 @@
     .faq-list{border-top:1px solid var(--line)}details{border-bottom:1px solid var(--line);padding:24px 0}summary{cursor:pointer;font-size:19px;list-style:none;display:flex;justify-content:space-between;gap:30px}summary:after{content:"+";color:var(--oxide);font:26px var(--serif)}details[open] summary:after{content:"−"}details p{max-width:760px;color:var(--muted);line-height:1.7;margin:18px 0 4px}
     .cta{background:var(--olive);color:#fff}.cta-grid{display:grid;grid-template-columns:1fr .7fr;gap:70px;align-items:end}.cta .eyebrow{color:#ffffffaa}.cta .section-title{margin-bottom:0}.cta-copy{font-size:14px;line-height:1.7;color:#ffffffbb}.cta .solid-action{background:#fff;color:var(--ink);border-color:#fff;margin-top:25px}.cta .solid-action:hover{background:transparent;color:#fff}.cta-phone{display:block;margin-top:25px;font:400 30px var(--serif)}footer{background:var(--ink);color:#fff;padding:30px 0}.footer-row{display:flex;justify-content:space-between;align-items:center}.footer-logo{width:128px}.footer-logo img{width:100%;display:block}.footer-note{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:#ffffff88}
     @media(max-width:800px){:root{--wrap:calc(100% - 44px)}.site-header{height:70px;padding:0 22px}.desktop-nav,.site-header>.header-action{display:none}.menu-button{display:block}.breadcrumbs{padding-top:22px}.hero{padding:55px 0 75px}.hero-grid,.split,.cta-grid{display:block}.hero h1{font-size:clamp(50px,14vw,72px)}.hero-lead{font-size:15px}.hero-actions{display:block}.hero-actions .phone{display:inline-block;margin-top:24px}.hero-visual{height:430px;margin-top:55px}.section{padding:80px 0}.body-copy{margin-top:35px;font-size:15px}.service-grid{grid-template-columns:1fr}.service,.service:nth-child(even){padding:22px 0;border-left:0}.process-head{display:block}.process-head p{width:auto;margin-top:30px}.step{grid-template-columns:45px 1fr;gap:15px}.step p{grid-column:2}.value-grid{display:block}.value,.value:not(:first-child){min-height:0;padding:25px 0;border-right:0;border-bottom:1px solid var(--line)}.cta-copy{margin-top:35px}.footer-row{display:block;line-height:2.2}.footer-note{display:block}}
+    @media(max-width:1100px) and (min-width:801px){.site-header{padding:0 28px}.desktop-nav{gap:16px;font-size:9px}}
   </style>
 </head>
 <body>
   <noscript><div><img src="https://mc.yandex.ru/watch/111410117" style="position:absolute;left:-9999px" alt=""></div></noscript>
   <header class="site-header">
     <a class="logo" href="/" aria-label="LEKALO — на главную"><img src="/assets/logo.svg" alt="LEKALO"></a>
-    <nav class="desktop-nav" aria-label="Основная навигация"><a class="active" href="/stroitelstvo-domov-pod-klyuch/">Строительство</a><a href="/proektirovanie-domov/">Проектирование</a><a href="/stoimost-stroitelstva-doma/">Стоимость</a><a href="/#projects">Проекты</a></nav>
+    <nav class="desktop-nav" aria-label="Основная навигация"><a class="active" href="/stroitelstvo-domov-pod-klyuch/">Строительство</a><a href="/proektirovanie-domov/">Проектирование</a><a href="/generalnyj-podryad/">Генподряд</a><a href="/stoimost-stroitelstva-doma/">Стоимость</a><a href="/#projects">Проекты</a></nav>
     <a class="header-action" href="/#contact">Обсудить проект</a>
     <button class="menu-button" id="menu" aria-label="Открыть меню" aria-expanded="false">☰</button>
   </header>
@@ -117,7 +118,7 @@
   <aside class="drawer" id="drawer" aria-hidden="true">
     <button class="drawer-close" id="drawerClose" aria-label="Закрыть">×</button>
     <div class="drawer-logo"><img src="/assets/logo.svg" alt="LEKALO"></div>
-    <nav class="drawer-links"><a href="/">Главная <span>01</span></a><a href="/stroitelstvo-domov-pod-klyuch/">Строительство <span>02</span></a><a href="/proektirovanie-domov/">Проектирование <span>03</span></a><a href="/stoimost-stroitelstva-doma/">Стоимость <span>04</span></a><a href="/#contact">Обсудить проект <span>↗</span></a></nav>
+    <nav class="drawer-links"><a href="/">Главная <span>01</span></a><a href="/stroitelstvo-domov-pod-klyuch/">Строительство <span>02</span></a><a href="/proektirovanie-domov/">Проектирование <span>03</span></a><a href="/generalnyj-podryad/">Генподряд <span>04</span></a><a href="/stoimost-stroitelstva-doma/">Стоимость <span>05</span></a><a href="/#contact">Обсудить проект <span>↗</span></a></nav>
   </aside>
 
   <main>
@@ -186,6 +187,7 @@
           <details><summary>Когда можно определить стоимость?</summary><p>Предварительный бюджет появляется после определения участка, площади, архитектуры, материалов и инженерного наполнения. Детальная стоимость уточняется по рабочей документации и спецификациям до начала основных работ. <a href="/stoimost-stroitelstva-doma/" style="color:var(--oxide);border-bottom:1px solid currentColor">Подробнее о расчёте стоимости →</a></p></details>
           <details><summary>Можно прийти со своим участком или готовым проектом?</summary><p>Да. Начинаем с аудита исходных данных и проверяем, насколько участок или существующий проект соответствуют задаче, бюджету и предполагаемой технологии строительства.</p></details>
           <details><summary>В какой географии вы работаете?</summary><p>Приоритетная территория работы LEKALO — Москва и Московская область. <a href="/proektirovanie-domov/" style="color:var(--oxide);border-bottom:1px solid currentColor">Подробнее об индивидуальном проектировании →</a></p></details>
+          <details><summary>Можно передать LEKALO управление всеми подрядчиками?</summary><p>Да, генеральный подряд объединяет участников строительства, поставки, график и контроль качества под ответственностью одной стороны. <a href="/generalnyj-podryad/" style="color:var(--oxide);border-bottom:1px solid currentColor">Подробнее о генеральном подряде →</a></p></details>
         </div>
       </div>
     </section>
