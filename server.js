@@ -17,6 +17,15 @@ const types = {
   '.md': 'text/plain; charset=utf-8'
 };
 
+const googleTagHead = `  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CCR5QKD0N4"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-CCR5QKD0N4');
+  </script>`;
+
 const metrikaHead = `  <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
@@ -31,11 +40,19 @@ const metrikaHead = `  <!-- Yandex.Metrika counter -->
   <!-- /Yandex.Metrika counter -->`;
 const metrikaNoScript = '  <noscript><div><img src="https://mc.yandex.ru/watch/111410117" style="position:absolute;left:-9999px" alt=""></div></noscript>';
 
-function ensureMetrika(html) {
-  if (html.includes('mc.yandex.ru/metrika/tag.js?id=111410117')) return html;
+function ensureAnalytics(html) {
+  let result = html;
 
-  let result = html.replace(/<head([^>]*)>/i, `<head$1>\n${metrikaHead}`);
-  result = result.replace(/<body([^>]*)>/i, `<body$1>\n${metrikaNoScript}`);
+  if (!result.includes('googletagmanager.com/gtag/js?id=G-CCR5QKD0N4')) {
+    result = result.replace(/<head([^>]*)>/i, `<head$1>\n${googleTagHead}`);
+  }
+
+  if (!result.includes('mc.yandex.ru/metrika/tag.js?id=111410117')) {
+    result = result.replace(/<\/head>/i, `${metrikaHead}\n</head>`);
+  }
+  if (!result.includes('mc.yandex.ru/watch/111410117')) {
+    result = result.replace(/<body([^>]*)>/i, `<body$1>\n${metrikaNoScript}`);
+  }
   return result;
 }
 
@@ -72,7 +89,7 @@ const server = http.createServer((req, res) => {
   const type = types[path.extname(file).toLowerCase()] || 'application/octet-stream';
   const source = fs.readFileSync(file);
   const payload = path.extname(file).toLowerCase() === '.html'
-    ? Buffer.from(ensureMetrika(source.toString('utf8')), 'utf8')
+    ? Buffer.from(ensureAnalytics(source.toString('utf8')), 'utf8')
     : source;
   res.writeHead(200, {
     'Content-Type': type,
