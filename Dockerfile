@@ -6,6 +6,7 @@ COPY index.html ./
 COPY 404.html ./
 COPY robots.txt ./
 COPY sitemap.xml ./
+COPY stroitelstvo-domov-pod-klyuch ./stroitelstvo-domov-pod-klyuch
 COPY assets ./assets
 EXPOSE 3000
 CMD ["npm", "start"]

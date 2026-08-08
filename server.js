@@ -93,8 +93,17 @@ const server = http.createServer((req, res) => {
     res.writeHead(301, {Location: `/${url.search}`});
     return res.end();
   }
+  if (url.pathname === '/stroitelstvo-domov-pod-klyuch') {
+    res.writeHead(301, {Location: `/stroitelstvo-domov-pod-klyuch/${url.search}`});
+    return res.end();
+  }
 
-  const requested = safePathname(url.pathname === '/' ? '/index.html' : url.pathname);
+  const publicPath = url.pathname === '/'
+    ? '/index.html'
+    : url.pathname.endsWith('/')
+      ? `${url.pathname}index.html`
+      : url.pathname;
+  const requested = safePathname(publicPath);
   if (!requested || requested.includes('\0')) return send(res, 400, 'Bad Request', 'text/plain; charset=utf-8');
   const file = path.resolve(root, `.${requested}`);
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
