@@ -101,6 +101,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(301, {Location: `/stoimost-stroitelstva-doma/${url.search}`});
     return res.end();
   }
+  if (url.pathname === '/proektirovanie-domov') {
+    res.writeHead(301, {Location: `/proektirovanie-domov/${url.search}`});
+    return res.end();
+  }
 
   const publicPath = url.pathname === '/'
     ? '/index.html'
