@@ -97,6 +97,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(301, {Location: `/stroitelstvo-domov-pod-klyuch/${url.search}`});
     return res.end();
   }
+  if (url.pathname === '/stoimost-stroitelstva-doma') {
+    res.writeHead(301, {Location: `/stoimost-stroitelstva-doma/${url.search}`});
+    return res.end();
+  }
 
   const publicPath = url.pathname === '/'
     ? '/index.html'
