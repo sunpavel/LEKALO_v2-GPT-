@@ -206,5 +206,6 @@
     function setDrawer(open){drawer.classList.toggle('open',open);backdrop.classList.toggle('open',open);drawer.setAttribute('aria-hidden',String(!open));menu.setAttribute('aria-expanded',String(open));}
     menu.addEventListener('click',()=>setDrawer(true));close.addEventListener('click',()=>setDrawer(false));backdrop.addEventListener('click',()=>setDrawer(false));
   </script>
+  <script defer src="/assets/site-analytics.js"></script>
 </body>
 </html>

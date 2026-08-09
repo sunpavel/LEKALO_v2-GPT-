@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/leads.js": {
+      "maxDuration": 10,
+      "memory": 256
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {"key": "X-Content-Type-Options", "value": "nosniff"},
+        {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"}
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {"key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400"}
+      ]
+    }
+  ],
+  "redirects": [
+    {"source": "/index.html", "destination": "/", "permanent": true},
+    {"source": "/stroitelstvo-domov-pod-klyuch", "destination": "/stroitelstvo-domov-pod-klyuch/", "permanent": true},
+    {"source": "/stoimost-stroitelstva-doma", "destination": "/stoimost-stroitelstva-doma/", "permanent": true},
+    {"source": "/proektirovanie-domov", "destination": "/proektirovanie-domov/", "permanent": true},
+    {"source": "/generalnyj-podryad", "destination": "/generalnyj-podryad/", "permanent": true},
+    {"source": "/stroitelnyy-kontrol", "destination": "/stroitelnyy-kontrol/", "permanent": true},
+    {"source": "/proekty", "destination": "/proekty/", "permanent": true},
+    {"source": "/proekty/rezidentsiya-s-basseynom", "destination": "/proekty/rezidentsiya-s-basseynom/", "permanent": true},
+    {"source": "/proekty/interer-zagorodnogo-doma", "destination": "/proekty/interer-zagorodnogo-doma/", "permanent": true},
+    {"source": "/proekty/dom-v-lesu", "destination": "/proekty/dom-v-lesu/", "permanent": true}
+  ]
+}
