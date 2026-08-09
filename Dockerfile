@@ -14,4 +14,4 @@ COPY stroitelnyy-kontrol ./stroitelnyy-kontrol
 COPY proekty ./proekty
 COPY assets ./assets
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

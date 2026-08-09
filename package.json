@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "LEKALO private architecture landing page",
-  "scripts": {"start": "node server.js"},
+  "scripts": {},
   "engines": {"node": ">=18"}
 }

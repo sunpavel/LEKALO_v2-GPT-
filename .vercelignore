@@ -1,0 +1,9 @@
+# Railway-only runtime files. Excluding the root HTTP server prevents Vercel
+# from treating this static site as a single Node.js application.
+server.js
+Dockerfile
+railway.json
+RAILWAY-LEADS-SETUP.md
+SEO-SEMANTICS.md
+lekalo-design-code.md
+.github
