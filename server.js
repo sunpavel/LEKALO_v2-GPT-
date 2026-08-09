@@ -4,6 +4,11 @@ const path = require('node:path');
 
 const root = __dirname;
 const port = Number(process.env.PORT || 3000);
+const leadRateLimit = new Map();
+const leadDuplicates = new Map();
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
+const MAX_LEAD_BODY = 16 * 1024;
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -56,6 +61,9 @@ function ensureAnalytics(html) {
   if (!result.includes('mc.yandex.ru/watch/111410117')) {
     result = result.replace(/<body([^>]*)>/i, `<body$1>\n${metrikaNoScript}`);
   }
+  if (!result.includes('/assets/site-analytics.js')) {
+    result = result.replace(/<\/body>/i, '  <script defer src="/assets/site-analytics.js"></script>\n</body>');
+  }
   return result;
 }
 
@@ -80,9 +88,181 @@ function safePathname(rawUrl) {
   }
 }
 
-const server = http.createServer((req, res) => {
+function clean(value, maxLength) {
+  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>]/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[char]));
+}
+
+function requestIp(req) {
+  return clean(String(req.headers['x-forwarded-for'] || '').split(',')[0] || req.socket.remoteAddress || 'unknown', 80);
+}
+
+function json(res, status, data) {
+  return send(res, status, JSON.stringify(data), 'application/json; charset=utf-8');
+}
+
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    let tooLarge = false;
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      if (tooLarge) return;
+      body += chunk;
+      if (Buffer.byteLength(body, 'utf8') > MAX_LEAD_BODY) {
+        tooLarge = true;
+        body = '';
+      }
+    });
+    req.on('end', () => {
+      if (tooLarge) return reject(Object.assign(new Error('Body too large'), {status: 413}));
+      try { resolve(JSON.parse(body || '{}')); }
+      catch { reject(Object.assign(new Error('Invalid JSON'), {status: 400})); }
+    });
+    req.on('error', reject);
+  });
+}
+
+function allowedLeadOrigin(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    return hostname === 'lklo.ru' || hostname === 'www.lklo.ru' || hostname === 'localhost' || hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
+function rateLimited(ip) {
+  const now = Date.now();
+  const recent = (leadRateLimit.get(ip) || []).filter((time) => now - time < RATE_WINDOW_MS);
+  if (recent.length >= 5) return true;
+  recent.push(now);
+  leadRateLimit.set(ip, recent);
+  return false;
+}
+
+function leadStoragePaths() {
+  const configured = process.env.LEADS_FILE ? path.resolve(process.env.LEADS_FILE) : '/data/leads.jsonl';
+  return configured === '/tmp/lekalo-leads.jsonl' ? [configured] : [configured, '/tmp/lekalo-leads.jsonl'];
+}
+
+function saveLead(lead) {
+  let lastError;
+  for (const file of leadStoragePaths()) {
+    try {
+      fs.mkdirSync(path.dirname(file), {recursive: true});
+      fs.appendFileSync(file, `${JSON.stringify(lead)}\n`, {encoding: 'utf8', mode: 0o600});
+      return file;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
+async function sendLeadToTelegram(lead) {
+  const token = clean(process.env.TELEGRAM_BOT_TOKEN, 200);
+  const chats = clean(process.env.TELEGRAM_CHAT_IDS || process.env.TELEGRAM_CHAT_ID, 500)
+    .split(',').map((item) => item.trim()).filter(Boolean);
+  if (!token || !chats.length) return {configured: false, delivered: 0, total: chats.length};
+
+  const fields = [
+    '<b>Новая заявка с lklo.ru</b>',
+    '',
+    `<b>Имя:</b> ${escapeHtml(lead.name)}`,
+    `<b>Контакт:</b> ${escapeHtml(lead.contact)}`,
+    `<b>Формат:</b> ${escapeHtml(lead.format || 'Не указан')}`,
+    `<b>О проекте:</b> ${escapeHtml(lead.brief || 'Не указано')}`,
+    '',
+    `<b>Страница:</b> ${escapeHtml(lead.page || '/')}`,
+    `<b>Первая страница:</b> ${escapeHtml(lead.landing || lead.page || '/')}`,
+    `<b>Источник:</b> ${escapeHtml(lead.source || 'Прямой переход')}`,
+    `<b>UTM:</b> ${escapeHtml(lead.utm || '—')}`,
+    `<b>Время:</b> ${escapeHtml(lead.createdAt)}`
+  ];
+  const telegramApiBase = clean(process.env.TELEGRAM_API_BASE, 500) || 'https://api.telegram.org';
+  const endpoint = `${telegramApiBase.replace(/\/$/, '')}/bot${token}/sendMessage`;
+  const results = await Promise.allSettled(chats.map(async (chatId) => {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({chat_id: chatId, text: fields.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true}),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) throw new Error(`Telegram HTTP ${response.status}`);
+    const result = await response.json();
+    if (!result.ok) throw new Error('Telegram rejected message');
+  }));
+  return {configured: true, delivered: results.filter((result) => result.status === 'fulfilled').length, total: chats.length};
+}
+
+async function handleLead(req, res) {
+  if (!allowedLeadOrigin(req)) return json(res, 403, {ok: false, message: 'Источник запроса не разрешён.'});
+  if (!String(req.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+    return json(res, 415, {ok: false, message: 'Неверный формат запроса.'});
+  }
+  const ip = requestIp(req);
+  if (rateLimited(ip)) return json(res, 429, {ok: false, message: 'Слишком много попыток. Попробуйте немного позже.'});
+
+  let body;
+  try { body = await readJson(req); }
+  catch (error) { return json(res, error.status || 400, {ok: false, message: 'Не удалось прочитать заявку.'}); }
+
+  if (clean(body.website, 200)) return json(res, 200, {ok: true});
+  const lead = {
+    id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+    name: clean(body.name, 100),
+    contact: clean(body.contact, 160),
+    format: clean(body.format, 100),
+    brief: clean(body.brief, 2000),
+    page: clean(body.page, 500),
+    landing: clean(body.landing, 500),
+    source: clean(body.referrer, 500),
+    utm: clean(body.utm, 800)
+  };
+  if (!lead.name || !lead.contact) return json(res, 422, {ok: false, message: 'Укажите имя и контакт.'});
+
+  const duplicateKey = lead.contact.toLowerCase().replace(/\s+/g, '');
+  const duplicateAt = leadDuplicates.get(duplicateKey) || 0;
+  if (Date.now() - duplicateAt < DUPLICATE_WINDOW_MS) {
+    return json(res, 409, {ok: false, message: 'Эта заявка уже отправлена. Мы скоро свяжемся с вами.'});
+  }
+
+  try { saveLead(lead); }
+  catch (error) {
+    console.error('Lead storage failed:', error.message);
+    return json(res, 503, {ok: false, message: 'Не удалось сохранить заявку. Позвоните нам: +7 915 298-75-54.'});
+  }
+
+  let telegram;
+  try { telegram = await sendLeadToTelegram(lead); }
+  catch (error) {
+    console.error(`Telegram delivery failed for ${lead.id}:`, error.message);
+    telegram = {configured: true, delivered: 0, total: 1};
+  }
+  if (!telegram.configured || telegram.delivered === 0) {
+    return json(res, 503, {ok: false, saved: true, message: 'Заявка сохранена, но уведомление не отправилось. Позвоните нам: +7 915 298-75-54.'});
+  }
+
+  leadDuplicates.set(duplicateKey, Date.now());
+  const partial = telegram.delivered < telegram.total;
+  console.log(`Lead ${lead.id} stored and delivered to ${telegram.delivered}/${telegram.total} Telegram chats`);
+  return json(res, partial ? 202 : 200, {ok: true, delivery: partial ? 'partial' : 'complete'});
+}
+
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (url.pathname === '/health') return send(res, 200, 'ok', 'text/plain; charset=utf-8');
+  if (url.pathname === '/api/leads') {
+    if (req.method !== 'POST') return json(res, 405, {ok: false, message: 'Method Not Allowed'});
+    return handleLead(req, res);
+  }
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method Not Allowed', 'text/plain; charset=utf-8');
 
   const hostname = String(req.headers.host || '').split(':')[0].toLowerCase();
