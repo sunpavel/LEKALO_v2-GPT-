@@ -64,6 +64,10 @@ function parseBody(req) {
   return req.body && typeof req.body === 'object' ? req.body : {};
 }
 
+function hasConsent(value) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
+}
+
 async function sendLeadToTelegram(lead) {
   const token = clean(process.env.TELEGRAM_BOT_TOKEN, 200);
   const chats = clean(process.env.TELEGRAM_CHAT_IDS || process.env.TELEGRAM_CHAT_ID, 500)
@@ -164,6 +168,12 @@ module.exports = async function handler(req, res) {
   if (!lead.name || !lead.contact) {
     return res.status(422).json({ok: false, message: 'Укажите имя и контакт.'});
   }
+  if (!hasConsent(body.consent)) {
+    return res.status(422).json({
+      ok: false,
+      message: 'Подтвердите согласие на обработку персональных данных.'
+    });
+  }
 
   const duplicateKey = lead.contact.toLowerCase().replace(/\s+/g, '');
   const duplicateAt = state.duplicates.get(duplicateKey) || 0;
@@ -185,7 +195,7 @@ module.exports = async function handler(req, res) {
   if (!telegram.configured || telegram.delivered === 0) {
     return res.status(503).json({
       ok: false,
-      message: 'Уведомление не отправилось. Позвоните нам: +7 915 298-75-54.'
+      message: 'Не удалось отправить заявку. Попробуйте ещё раз немного позже.'
     });
   }
 

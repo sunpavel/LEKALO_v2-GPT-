@@ -227,6 +227,9 @@ async function handleLead(req, res) {
     utm: clean(body.utm, 800)
   };
   if (!lead.name || !lead.contact) return json(res, 422, {ok: false, message: 'Укажите имя и контакт.'});
+  if (!['1', 'true', 'yes', 'on'].includes(String(body.consent || '').toLowerCase())) {
+    return json(res, 422, {ok: false, message: 'Подтвердите согласие на обработку персональных данных.'});
+  }
 
   const duplicateKey = lead.contact.toLowerCase().replace(/\s+/g, '');
   const duplicateAt = leadDuplicates.get(duplicateKey) || 0;
@@ -237,7 +240,7 @@ async function handleLead(req, res) {
   try { saveLead(lead); }
   catch (error) {
     console.error('Lead storage failed:', error.message);
-    return json(res, 503, {ok: false, message: 'Не удалось сохранить заявку. Позвоните нам: +7 915 298-75-54.'});
+    return json(res, 503, {ok: false, message: 'Не удалось сохранить заявку. Попробуйте ещё раз немного позже.'});
   }
 
   let telegram;
@@ -247,7 +250,7 @@ async function handleLead(req, res) {
     telegram = {configured: true, delivered: 0, total: 1};
   }
   if (!telegram.configured || telegram.delivered === 0) {
-    return json(res, 503, {ok: false, saved: true, message: 'Заявка сохранена, но уведомление не отправилось. Позвоните нам: +7 915 298-75-54.'});
+    return json(res, 503, {ok: false, saved: true, message: 'Заявка сохранена, но уведомление не отправилось. Попробуйте ещё раз немного позже.'});
   }
 
   leadDuplicates.set(duplicateKey, Date.now());
@@ -296,6 +299,14 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/proekty') {
     res.writeHead(301, {Location: `/proekty/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/kontakty') {
+    res.writeHead(301, {Location: `/kontakty/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/privacy') {
+    res.writeHead(301, {Location: `/privacy/${url.search}`});
     return res.end();
   }
   if (url.pathname === '/proekty/rezidentsiya-s-basseynom') {

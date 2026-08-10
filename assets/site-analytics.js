@@ -23,7 +23,6 @@
     const link = event.target.closest('a[href]');
     if (!link) return;
     const href = link.getAttribute('href') || '';
-    if (href.startsWith('tel:')) track('phone_click', {page: location.pathname});
     if (/^(https?:\/\/)?(t\.me|telegram\.me)\//i.test(href)) track('telegram_click', {page: location.pathname});
   });
 })();
