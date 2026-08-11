@@ -9,6 +9,9 @@ const leadDuplicates = new Map();
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 const MAX_LEAD_BODY = 16 * 1024;
+const mobileHeroDataUrl = `data:image/webp;base64,${fs.readFileSync(
+  path.join(root, 'assets/responsive/hero-homepage-640.webp')
+).toString('base64')}`;
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -50,6 +53,15 @@ const metrikaNoScript = '  <noscript><div><img src="https://mc.yandex.ru/watch/1
 
 function ensureAnalytics(html) {
   let result = html;
+
+  // Telegram WebView can be slow to establish additional asset requests.
+  // Inline only the small mobile hero so the first screen arrives with HTML.
+  result = result.replace(/\s*<link rel="preload" as="image"[^>]+hero-homepage[^>]+>\s*/i, '\n');
+  result = result.replace(
+    /<img class="hero-image"[^>]+>/i,
+    `<picture><source media="(min-width: 801px)" srcset="/assets/responsive/hero-homepage-960.webp 960w, /assets/responsive/hero-homepage-1440.webp 1440w, /assets/hero-homepage.jpg 1800w" sizes="100vw"><img class="hero-image" src="${mobileHeroDataUrl}" decoding="sync" loading="eager" alt="Современная частная резиденция на закате" width="1800" height="1013" fetchpriority="high"></picture>`
+  );
+  result = result.replace('loading="eager" fetchpriority="high"><div class="project-caption"', 'loading="lazy" fetchpriority="low"><div class="project-caption"');
 
   if (!result.includes('googletagmanager.com/gtag/js?id=G-CCR5QKD0N4')) {
     result = result.replace(/<head([^>]*)>/i, `<head$1>\n${googleTagHead}`);
@@ -344,7 +356,7 @@ const server = http.createServer(async (req, res) => {
     'Content-Length': String(payload.length),
     'Cache-Control': path.extname(file).toLowerCase() === '.html'
       ? 'public, max-age=0, must-revalidate'
-      : 'public, max-age=604800, stale-while-revalidate=86400',
+      : 'public, max-age=31536000, immutable',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin'
   });
