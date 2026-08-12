@@ -51,6 +51,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://lklo.ru/proekty/taktilnyy-interer/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://lklo.ru/kontakty/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

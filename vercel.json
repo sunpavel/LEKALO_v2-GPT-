@@ -42,6 +42,7 @@
     {"source": "/proekty/interer-zagorodnogo-doma/", "destination": "/proekty/rezidentsiya-v-lesu/", "permanent": true},
     {"source": "/proekty/rezidentsiya-v-lesu", "destination": "/proekty/rezidentsiya-v-lesu/", "permanent": true},
     {"source": "/proekty/dom-v-lesu", "destination": "/proekty/dom-v-lesu/", "permanent": true},
+    {"source": "/proekty/taktilnyy-interer", "destination": "/proekty/taktilnyy-interer/", "permanent": true},
     {"source": "/kontakty", "destination": "/kontakty/", "permanent": true},
     {"source": "/privacy", "destination": "/privacy/", "permanent": true}
   ]
