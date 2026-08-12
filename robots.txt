@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /api/
 
 Sitemap: https://lklo.ru/sitemap.xml
 Host: lklo.ru

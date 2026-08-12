@@ -289,6 +289,10 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(301, {Location: `/${url.search}`});
     return res.end();
   }
+  if (url.pathname === '/lekalo-v2.html') {
+    res.writeHead(301, {Location: `/${url.search}`});
+    return res.end();
+  }
   if (url.pathname === '/stroitelstvo-domov-pod-klyuch') {
     res.writeHead(301, {Location: `/stroitelstvo-domov-pod-klyuch/${url.search}`});
     return res.end();
@@ -355,10 +359,11 @@ const server = http.createServer(async (req, res) => {
   const payload = path.extname(file).toLowerCase() === '.html'
     ? Buffer.from(ensureAnalytics(source.toString('utf8')), 'utf8')
     : source;
+  const isSearchControlFile = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
   res.writeHead(200, {
     'Content-Type': type,
     'Content-Length': String(payload.length),
-    'Cache-Control': path.extname(file).toLowerCase() === '.html'
+    'Cache-Control': path.extname(file).toLowerCase() === '.html' || isSearchControlFile
       ? 'public, max-age=0, must-revalidate'
       : 'public, max-age=31536000, immutable',
     'X-Content-Type-Options': 'nosniff',

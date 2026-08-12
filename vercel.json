@@ -17,6 +17,18 @@
       ]
     },
     {
+      "source": "/robots.txt",
+      "headers": [
+        {"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}
+      ]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         {"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}
@@ -31,6 +43,7 @@
   ],
   "redirects": [
     {"source": "/index.html", "destination": "/", "permanent": true},
+    {"source": "/lekalo-v2.html", "destination": "/", "permanent": true},
     {"source": "/stroitelstvo-domov-pod-klyuch", "destination": "/stroitelstvo-domov-pod-klyuch/", "permanent": true},
     {"source": "/stoimost-stroitelstva-doma", "destination": "/stoimost-stroitelstva-doma/", "permanent": true},
     {"source": "/proektirovanie-domov", "destination": "/proektirovanie-domov/", "permanent": true},
