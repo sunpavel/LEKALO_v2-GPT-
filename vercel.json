@@ -38,7 +38,9 @@
     {"source": "/stroitelnyy-kontrol", "destination": "/stroitelnyy-kontrol/", "permanent": true},
     {"source": "/proekty", "destination": "/proekty/", "permanent": true},
     {"source": "/proekty/rezidentsiya-s-basseynom", "destination": "/proekty/rezidentsiya-s-basseynom/", "permanent": true},
-    {"source": "/proekty/interer-zagorodnogo-doma", "destination": "/proekty/interer-zagorodnogo-doma/", "permanent": true},
+    {"source": "/proekty/interer-zagorodnogo-doma", "destination": "/proekty/rezidentsiya-v-lesu/", "permanent": true},
+    {"source": "/proekty/interer-zagorodnogo-doma/", "destination": "/proekty/rezidentsiya-v-lesu/", "permanent": true},
+    {"source": "/proekty/rezidentsiya-v-lesu", "destination": "/proekty/rezidentsiya-v-lesu/", "permanent": true},
     {"source": "/proekty/dom-v-lesu", "destination": "/proekty/dom-v-lesu/", "permanent": true},
     {"source": "/kontakty", "destination": "/kontakty/", "permanent": true},
     {"source": "/privacy", "destination": "/privacy/", "permanent": true}

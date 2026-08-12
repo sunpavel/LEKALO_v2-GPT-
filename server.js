@@ -325,8 +325,12 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(301, {Location: `/proekty/rezidentsiya-s-basseynom/${url.search}`});
     return res.end();
   }
-  if (url.pathname === '/proekty/interer-zagorodnogo-doma') {
-    res.writeHead(301, {Location: `/proekty/interer-zagorodnogo-doma/${url.search}`});
+  if (url.pathname === '/proekty/interer-zagorodnogo-doma' || url.pathname === '/proekty/interer-zagorodnogo-doma/') {
+    res.writeHead(301, {Location: `/proekty/rezidentsiya-v-lesu/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/proekty/rezidentsiya-v-lesu') {
+    res.writeHead(301, {Location: `/proekty/rezidentsiya-v-lesu/${url.search}`});
     return res.end();
   }
   if (url.pathname === '/proekty/dom-v-lesu') {
