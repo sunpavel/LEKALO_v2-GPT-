@@ -17,7 +17,10 @@ const socialPreviewHtml = `<!doctype html>
 <meta property="og:type" content="website">
 <meta property="og:title" content="LEKALO — частная архитектура и управление строительством">
 <meta property="og:description" content="Индивидуальные загородные дома в Москве и Московской области — от архитектурной концепции до реализации одной командой.">
-<meta property="og:image" content="https://lklo.ru/assets/og-lekalo-telegram-v5.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/sunpavel/LEKALO_v2-GPT-/main/assets/og-lekalo-telegram-v6.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="800">
+<meta property="og:image:height" content="420">
 <title>LEKALO — частная архитектура и управление строительством</title>
 </head>
 <body></body>
