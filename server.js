@@ -350,10 +350,11 @@ const server = http.createServer(async (req, res) => {
     ? Buffer.from(ensureAnalytics(source.toString('utf8')), 'utf8')
     : source;
   const isSearchControlFile = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
+  const isSocialPreviewImage = url.pathname === '/assets/hero-concept.jpg';
   res.writeHead(200, {
     'Content-Type': type,
     'Content-Length': String(payload.length),
-    'Cache-Control': path.extname(file).toLowerCase() === '.html' || isSearchControlFile
+    'Cache-Control': path.extname(file).toLowerCase() === '.html' || isSearchControlFile || isSocialPreviewImage
       ? 'public, max-age=0, must-revalidate'
       : 'public, max-age=31536000, immutable',
     'X-Content-Type-Options': 'nosniff',
