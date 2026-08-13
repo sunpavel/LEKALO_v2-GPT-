@@ -350,7 +350,8 @@ const server = http.createServer(async (req, res) => {
     ? Buffer.from(ensureAnalytics(source.toString('utf8')), 'utf8')
     : source;
   const isSearchControlFile = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
-  const isSocialPreviewImage = url.pathname === '/assets/hero-concept.jpg';
+  const isSocialPreviewImage = url.pathname === '/assets/hero-concept.jpg'
+    || url.pathname === '/assets/og-lekalo-home-v4.jpg';
   res.writeHead(200, {
     'Content-Type': type,
     'Content-Length': String(payload.length),
