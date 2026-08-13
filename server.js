@@ -9,6 +9,19 @@ const leadDuplicates = new Map();
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 const MAX_LEAD_BODY = 16 * 1024;
+const socialPreviewBotPattern = /TelegramBot|WhatsApp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|Discordbot/i;
+const socialPreviewHtml = `<!doctype html>
+<html lang="ru" prefix="og: http://ogp.me/ns#">
+<head>
+<meta charset="utf-8">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LEKALO — частная архитектура и управление строительством">
+<meta property="og:description" content="Индивидуальные загородные дома в Москве и Московской области — от архитектурной концепции до реализации одной командой.">
+<meta property="og:image" content="https://lklo.ru/assets/og-lekalo-telegram-v5.jpg">
+<title>LEKALO — частная архитектура и управление строительством</title>
+</head>
+<body></body>
+</html>`;
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -269,6 +282,11 @@ const server = http.createServer(async (req, res) => {
     return handleLead(req, res);
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method Not Allowed', 'text/plain; charset=utf-8');
+
+  const userAgent = String(req.headers['user-agent'] || '');
+  if (url.pathname === '/' && socialPreviewBotPattern.test(userAgent)) {
+    return send(res, 200, socialPreviewHtml, 'text/html; charset=utf-8', 'public, max-age=300');
+  }
 
   const hostname = String(req.headers.host || '').split(':')[0].toLowerCase();
   if (hostname === 'www.lklo.ru') {
