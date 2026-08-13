@@ -10,6 +10,7 @@ const RATE_WINDOW_MS = 10 * 60 * 1000;
 const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 const MAX_LEAD_BODY = 16 * 1024;
 const socialPreviewBotPattern = /TelegramBot|WhatsApp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|Discordbot/i;
+const socialPreviewPath = '/social-preview/lekalo-v7';
 const socialPreviewHtml = `<!doctype html>
 <html lang="ru" prefix="og: http://ogp.me/ns#">
 <head>
@@ -288,8 +289,20 @@ const server = http.createServer(async (req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method Not Allowed', 'text/plain; charset=utf-8');
 
   const userAgent = String(req.headers['user-agent'] || '');
-  if (url.pathname === '/' && socialPreviewBotPattern.test(userAgent)) {
-    return send(res, 200, socialPreviewHtml, 'text/html; charset=utf-8', 'public, max-age=300');
+  const isSocialPreviewBot = socialPreviewBotPattern.test(userAgent);
+  if (url.pathname === '/' && isSocialPreviewBot) {
+    res.writeHead(302, {
+      Location: socialPreviewPath,
+      'Cache-Control': 'no-store'
+    });
+    return res.end();
+  }
+  if (url.pathname === socialPreviewPath && isSocialPreviewBot) {
+    return send(res, 200, socialPreviewHtml, 'text/html; charset=utf-8', 'no-store');
+  }
+  if (url.pathname === socialPreviewPath) {
+    res.writeHead(302, {Location: '/', 'Cache-Control': 'no-store'});
+    return res.end();
   }
 
   const hostname = String(req.headers.host || '').split(':')[0].toLowerCase();
