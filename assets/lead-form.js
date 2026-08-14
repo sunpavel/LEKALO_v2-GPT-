@@ -6,6 +6,7 @@
   const success = document.querySelector('[data-form-success]');
   const submit = form.querySelector('[type="submit"]');
   const defaultSubmitHtml = submit.innerHTML;
+  const leadEndpoint = 'https://lekalo-v2-gpt.vercel.app/api/leads';
   const requestTimeoutMs = 15000;
   const params = new URLSearchParams(location.search);
   let formStarted = false;
@@ -56,9 +57,9 @@
     let completed = false;
 
     try {
-      const response = await fetch('/api/leads', {
+      const response = await fetch(leadEndpoint, {
         method: 'POST',
-        credentials: 'same-origin',
+        credentials: 'omit',
         headers: {
           'Content-Type': 'application/json',
           'Idempotency-Key': submissionId
