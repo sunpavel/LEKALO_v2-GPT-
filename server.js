@@ -6,6 +6,7 @@ const root = __dirname;
 const port = Number(process.env.PORT || 3000);
 const leadRateLimit = new Map();
 const leadDuplicates = new Map();
+const leadSubmissions = new Map();
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 const MAX_LEAD_BODY = 16 * 1024;
@@ -124,6 +125,10 @@ function json(res, status, data) {
   return send(res, status, JSON.stringify(data), 'application/json; charset=utf-8');
 }
 
+function logEvent(event, details = {}) {
+  console.log(JSON.stringify({event, at: new Date().toISOString(), ...details}));
+}
+
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -222,6 +227,7 @@ async function sendLeadToTelegram(lead) {
 }
 
 async function handleLead(req, res) {
+  const startedAt = Date.now();
   if (!allowedLeadOrigin(req)) return json(res, 403, {ok: false, message: 'Источник запроса не разрешён.'});
   if (!String(req.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
     return json(res, 415, {ok: false, message: 'Неверный формат запроса.'});
@@ -236,6 +242,7 @@ async function handleLead(req, res) {
   if (clean(body.website, 200)) return json(res, 200, {ok: true});
   const lead = {
     id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    submissionId: clean(req.headers['idempotency-key'] || body.submissionId, 100),
     createdAt: new Date().toISOString(),
     name: clean(body.name, 100),
     contact: clean(body.contact, 160),
@@ -251,17 +258,27 @@ async function handleLead(req, res) {
     return json(res, 422, {ok: false, message: 'Подтвердите согласие на обработку персональных данных.'});
   }
 
+  const submissionAt = lead.submissionId ? leadSubmissions.get(lead.submissionId) || 0 : 0;
+  if (submissionAt && Date.now() - submissionAt < DUPLICATE_WINDOW_MS) {
+    return json(res, 200, {ok: true, duplicate: true});
+  }
+
   const duplicateKey = lead.contact.toLowerCase().replace(/\s+/g, '');
   const duplicateAt = leadDuplicates.get(duplicateKey) || 0;
   if (Date.now() - duplicateAt < DUPLICATE_WINDOW_MS) {
-    return json(res, 409, {ok: false, message: 'Эта заявка уже отправлена. Мы скоро свяжемся с вами.'});
+    return json(res, 200, {ok: true, duplicate: true});
   }
 
-  try { saveLead(lead); }
+  let storagePath;
+  try { storagePath = saveLead(lead); }
   catch (error) {
     console.error('Lead storage failed:', error.message);
     return json(res, 503, {ok: false, message: 'Не удалось сохранить заявку. Попробуйте ещё раз немного позже.'});
   }
+
+  const storedAt = Date.now();
+  leadDuplicates.set(duplicateKey, storedAt);
+  if (lead.submissionId) leadSubmissions.set(lead.submissionId, storedAt);
 
   let telegram;
   try { telegram = await sendLeadToTelegram(lead); }
@@ -270,16 +287,26 @@ async function handleLead(req, res) {
     telegram = {configured: true, delivered: 0, total: 1};
   }
   if (!telegram.configured || telegram.delivered === 0) {
-    return json(res, 503, {ok: false, saved: true, message: 'Заявка сохранена, но уведомление не отправилось. Попробуйте ещё раз немного позже.'});
+    logEvent('lead_saved_delivery_pending', {
+      leadId: lead.id,
+      durationMs: Date.now() - startedAt,
+      storage: path.basename(storagePath),
+      telegramConfigured: telegram.configured
+    });
+    return json(res, 202, {ok: true, saved: true, delivery: 'pending'});
   }
 
-  leadDuplicates.set(duplicateKey, Date.now());
   const partial = telegram.delivered < telegram.total;
-  console.log(`Lead ${lead.id} stored and delivered to ${telegram.delivered}/${telegram.total} Telegram chats`);
+  logEvent('lead_delivered', {
+    leadId: lead.id,
+    durationMs: Date.now() - startedAt,
+    delivered: telegram.delivered,
+    total: telegram.total
+  });
   return json(res, partial ? 202 : 200, {ok: true, delivery: partial ? 'partial' : 'complete'});
 }
 
-const server = http.createServer(async (req, res) => {
+async function routeRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (url.pathname === '/health') return send(res, 200, 'ok', 'text/plain; charset=utf-8');
   if (url.pathname === '/api/leads') {
@@ -326,6 +353,10 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(301, {Location: `/stroitelnyy-kontrol/${url.search}`});
     return res.end();
   }
+  if (url.pathname === '/audit-stroitelstva') {
+    res.writeHead(301, {Location: `/audit-stroitelstva/${url.search}`});
+    return res.end();
+  }
   if (url.pathname === '/proekty') {
     res.writeHead(301, {Location: `/proekty/${url.search}`});
     return res.end();
@@ -352,6 +383,10 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/proekty/dom-v-lesu') {
     res.writeHead(301, {Location: `/proekty/dom-v-lesu/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/proekty/taktilnyy-interer') {
+    res.writeHead(301, {Location: `/proekty/taktilnyy-interer/${url.search}`});
     return res.end();
   }
 
@@ -386,6 +421,21 @@ const server = http.createServer(async (req, res) => {
   });
   if (req.method === 'HEAD') return res.end();
   res.end(payload);
+}
+
+const server = http.createServer((req, res) => {
+  Promise.resolve(routeRequest(req, res)).catch((error) => {
+    console.error('Unhandled request error:', error);
+    if (!res.headersSent) return json(res, 500, {ok: false, message: 'Внутренняя ошибка сервиса.'});
+    res.destroy();
+  });
 });
 
-server.listen(port, '0.0.0.0', () => console.log(`LEKALO server listening on ${port}`));
+server.requestTimeout = 20000;
+server.headersTimeout = 25000;
+
+if (require.main === module) {
+  server.listen(port, '0.0.0.0', () => logEvent('server_started', {port}));
+}
+
+module.exports = {server};

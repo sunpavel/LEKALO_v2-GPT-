@@ -4,7 +4,8 @@
   "private": true,
   "description": "LEKALO private architecture landing page",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
   },
   "engines": {
     "node": ">=18"
