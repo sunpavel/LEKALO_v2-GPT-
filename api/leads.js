@@ -136,6 +136,19 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
+  const originAllowed = allowedOrigin(req);
+  if (req.headers.origin && originAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  if (req.method === 'OPTIONS') {
+    if (!originAllowed) return res.status(403).end();
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Idempotency-Key');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    return res.status(204).end();
+  }
+
   if (req.method === 'GET' && String(req.query?.health || '') === '1') {
     const token = clean(process.env.TELEGRAM_BOT_TOKEN, 200);
     const chats = clean(process.env.TELEGRAM_CHAT_IDS || process.env.TELEGRAM_CHAT_ID, 500)
@@ -158,7 +171,7 @@ module.exports = async function handler(req, res) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ok: false, message: 'Method Not Allowed'});
   }
-  if (!allowedOrigin(req)) {
+  if (!originAllowed) {
     return res.status(403).json({ok: false, message: 'Источник запроса не разрешён.'});
   }
   if (!String(req.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
