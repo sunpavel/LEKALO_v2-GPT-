@@ -10,6 +10,7 @@ process.env.LEADS_FILE = path.join(testDirectory, 'leads.jsonl');
 delete process.env.TELEGRAM_BOT_TOKEN;
 delete process.env.TELEGRAM_CHAT_ID;
 delete process.env.TELEGRAM_CHAT_IDS;
+process.env.LEADS_RELAY_URL = 'direct';
 
 const {server} = require('../server');
 
@@ -85,40 +86,37 @@ test('Timeweb server serves pages and accepts leads without hanging', async () =
     const stored = fs.readFileSync(process.env.LEADS_FILE, 'utf8').trim().split('\n');
     assert.equal(stored.length, 1);
 
-    let telegramPayload;
-    const telegram = http.createServer((req, res) => {
+    let relayPayload;
+    const relay = http.createServer((req, res) => {
       let body = '';
       req.setEncoding('utf8');
       req.on('data', (chunk) => { body += chunk; });
       req.on('end', () => {
-        telegramPayload = JSON.parse(body);
+        relayPayload = JSON.parse(body);
         res.writeHead(200, {'Content-Type': 'application/json'});
-        res.end(JSON.stringify({ok: true, result: {message_id: 1}}));
+        res.end(JSON.stringify({ok: true, delivery: 'complete'}));
       });
     });
     await new Promise((resolve, reject) => {
-      telegram.once('error', reject);
-      telegram.listen(0, '127.0.0.1', resolve);
+      relay.once('error', reject);
+      relay.listen(0, '127.0.0.1', resolve);
     });
 
     try {
-      process.env.TELEGRAM_BOT_TOKEN = 'test-token';
-      process.env.TELEGRAM_CHAT_ID = '12345';
-      process.env.TELEGRAM_API_BASE = `http://127.0.0.1:${telegram.address().port}`;
+      process.env.LEADS_RELAY_URL = `http://127.0.0.1:${relay.address().port}/api/leads`;
       const delivered = await request(port, '/api/leads', {
         method: 'POST',
         headers: {Origin: 'https://lklo.ru', 'Idempotency-Key': 'test-submission-2'},
-        body: {name: 'Telegram test', contact: 'local-telegram-contact', consent: 'yes'}
+        body: {name: 'Relay test', contact: 'local-relay-contact', consent: 'yes'}
       });
       assert.equal(delivered.status, 200);
       assert.equal(JSON.parse(delivered.body).delivery, 'complete');
-      assert.equal(telegramPayload.chat_id, '12345');
-      assert.match(telegramPayload.text, /Новая заявка с lklo\.ru/);
+      assert.equal(relayPayload.name, 'Relay test');
+      assert.equal(relayPayload.contact, 'local-relay-contact');
+      assert.equal(relayPayload.consent, 'yes');
     } finally {
-      delete process.env.TELEGRAM_BOT_TOKEN;
-      delete process.env.TELEGRAM_CHAT_ID;
-      delete process.env.TELEGRAM_API_BASE;
-      await new Promise((resolve) => telegram.close(resolve));
+      process.env.LEADS_RELAY_URL = 'direct';
+      await new Promise((resolve) => relay.close(resolve));
     }
   } finally {
     await new Promise((resolve) => server.close(resolve));
