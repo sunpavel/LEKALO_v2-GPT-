@@ -68,6 +68,19 @@ function hasConsent(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
 }
 
+async function telegramHealth(token) {
+  if (!token) return {reachable: false, status: 0};
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+      signal: AbortSignal.timeout(5000)
+    });
+    const result = await response.json();
+    return {reachable: response.ok && result.ok, status: response.status};
+  } catch (error) {
+    return {reachable: false, status: 0, error: clean(error.code || error.name || 'UNKNOWN', 80)};
+  }
+}
+
 async function sendLeadToTelegram(lead) {
   const token = clean(process.env.TELEGRAM_BOT_TOKEN, 200);
   const chats = clean(process.env.TELEGRAM_CHAT_IDS || process.env.TELEGRAM_CHAT_ID, 500)
@@ -129,11 +142,15 @@ module.exports = async function handler(req, res) {
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
+    const telegram = await telegramHealth(token);
     return res.status(200).json({
       ok: true,
       service: 'lekalo-lead-relay',
       telegramConfigured: Boolean(token && chats.length),
-      chatCount: chats.length
+      chatCount: chats.length,
+      telegramReachable: telegram.reachable,
+      telegramStatus: telegram.status,
+      telegramError: telegram.error || null
     });
   }
 
