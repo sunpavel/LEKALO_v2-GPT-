@@ -123,6 +123,20 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
+  if (req.method === 'GET' && String(req.query?.health || '') === '1') {
+    const token = clean(process.env.TELEGRAM_BOT_TOKEN, 200);
+    const chats = clean(process.env.TELEGRAM_CHAT_IDS || process.env.TELEGRAM_CHAT_ID, 500)
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return res.status(200).json({
+      ok: true,
+      service: 'lekalo-lead-relay',
+      telegramConfigured: Boolean(token && chats.length),
+      chatCount: chats.length
+    });
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ok: false, message: 'Method Not Allowed'});
