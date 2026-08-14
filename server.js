@@ -11,6 +11,7 @@ const leadSubmissions = new Map();
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
 const MAX_LEAD_BODY = 16 * 1024;
+const DEFAULT_LEAD_RELAY_URL = 'https://lekalo-v2-gpt.vercel.app/api/leads';
 const socialPreviewBotPattern = /TelegramBot|WhatsApp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|Discordbot/i;
 const socialPreviewHtml = `<!doctype html>
 <html lang="ru" prefix="og: http://ogp.me/ns#">
@@ -141,12 +142,53 @@ function postJson(endpoint, data, timeoutMs = 8000) {
     });
 
     request.setTimeout(timeoutMs, () => {
-      const error = Object.assign(new Error(`Telegram request timed out after ${timeoutMs} ms`), {code: 'ETIMEDOUT'});
+      const error = Object.assign(new Error(`Upstream request timed out after ${timeoutMs} ms`), {code: 'ETIMEDOUT'});
       request.destroy(error);
     });
     request.on('error', reject);
     request.end(body);
   });
+}
+
+function leadRelayUrl() {
+  const configured = clean(process.env.LEADS_RELAY_URL, 500);
+  if (configured.toLowerCase() === 'direct') return '';
+  return configured || DEFAULT_LEAD_RELAY_URL;
+}
+
+async function sendLeadToRelay(lead) {
+  const endpoint = leadRelayUrl();
+  if (!endpoint) return sendLeadToTelegram(lead);
+
+  const response = await postJson(endpoint, {
+    name: lead.name,
+    contact: lead.contact,
+    format: lead.format,
+    brief: lead.brief,
+    page: lead.page,
+    landing: lead.landing,
+    referrer: lead.source,
+    utm: lead.utm,
+    submissionId: lead.submissionId,
+    consent: 'yes',
+    website: ''
+  }, 12000);
+
+  let result = {};
+  try { result = JSON.parse(response.body || '{}'); } catch {}
+  if (response.status < 200 || response.status >= 300 || !result.ok) {
+    const message = clean(result.message, 240) || `HTTP ${response.status}`;
+    throw Object.assign(new Error(`Lead relay rejected request: ${message}`), {
+      code: `RELAY_HTTP_${response.status || 0}`
+    });
+  }
+
+  return {
+    configured: true,
+    delivered: 1,
+    total: 1,
+    channel: 'vercel-relay'
+  };
 }
 
 function requestIp(req) {
@@ -328,29 +370,40 @@ async function handleLead(req, res) {
   leadDuplicates.set(duplicateKey, storedAt);
   if (lead.submissionId) leadSubmissions.set(lead.submissionId, storedAt);
 
-  let telegram;
-  try { telegram = await sendLeadToTelegram(lead); }
+  let delivery;
+  try { delivery = await sendLeadToRelay(lead); }
   catch (error) {
-    console.error(`Telegram delivery failed for ${lead.id}:`, error.message);
-    telegram = {configured: true, delivered: 0, total: 1};
+    console.error(`Lead delivery failed for ${lead.id}:`, error.message);
+    delivery = {
+      configured: true,
+      delivered: 0,
+      total: 1,
+      channel: leadRelayUrl() ? 'vercel-relay' : 'telegram-direct',
+      failures: [{
+        code: clean(error.code || error.name || 'UNKNOWN', 80),
+        message: clean(error.message || 'Unknown delivery error', 240)
+      }]
+    };
   }
-  if (!telegram.configured || telegram.delivered === 0) {
+  if (!delivery.configured || delivery.delivered === 0) {
     logEvent('lead_saved_delivery_pending', {
       leadId: lead.id,
       durationMs: Date.now() - startedAt,
       storage: path.basename(storagePath),
-      telegramConfigured: telegram.configured,
-      telegramFailures: telegram.failures || []
+      deliveryChannel: delivery.channel,
+      deliveryConfigured: delivery.configured,
+      deliveryFailures: delivery.failures || []
     });
     return json(res, 202, {ok: true, saved: true, delivery: 'pending'});
   }
 
-  const partial = telegram.delivered < telegram.total;
+  const partial = delivery.delivered < delivery.total;
   logEvent('lead_delivered', {
     leadId: lead.id,
     durationMs: Date.now() - startedAt,
-    delivered: telegram.delivered,
-    total: telegram.total
+    channel: delivery.channel || 'telegram-direct',
+    delivered: delivery.delivered,
+    total: delivery.total
   });
   return json(res, partial ? 202 : 200, {ok: true, delivery: partial ? 'partial' : 'complete'});
 }
