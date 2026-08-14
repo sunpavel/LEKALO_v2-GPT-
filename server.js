@@ -1,4 +1,5 @@
 const http = require('node:http');
+const https = require('node:https');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -117,6 +118,37 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>]/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[char]));
 }
 
+function postJson(endpoint, data, timeoutMs = 8000) {
+  const url = new URL(endpoint);
+  const transport = url.protocol === 'https:' ? https : http;
+  const body = JSON.stringify(data);
+
+  return new Promise((resolve, reject) => {
+    const request = transport.request(url, {
+      method: 'POST',
+      family: 4,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    }, (response) => {
+      let responseBody = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => {
+        if (responseBody.length < 64 * 1024) responseBody += chunk;
+      });
+      response.on('end', () => resolve({status: response.statusCode || 0, body: responseBody}));
+    });
+
+    request.setTimeout(timeoutMs, () => {
+      const error = Object.assign(new Error(`Telegram request timed out after ${timeoutMs} ms`), {code: 'ETIMEDOUT'});
+      request.destroy(error);
+    });
+    request.on('error', reject);
+    request.end(body);
+  });
+}
+
 function requestIp(req) {
   return clean(String(req.headers['x-forwarded-for'] || '').split(',')[0] || req.socket.remoteAddress || 'unknown', 80);
 }
@@ -213,17 +245,33 @@ async function sendLeadToTelegram(lead) {
   const telegramApiBase = clean(process.env.TELEGRAM_API_BASE, 500) || 'https://api.telegram.org';
   const endpoint = `${telegramApiBase.replace(/\/$/, '')}/bot${token}/sendMessage`;
   const results = await Promise.allSettled(chats.map(async (chatId) => {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({chat_id: chatId, text: fields.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true}),
-      signal: AbortSignal.timeout(8000)
+    const response = await postJson(endpoint, {
+      chat_id: chatId,
+      text: fields.join('\n'),
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
     });
-    if (!response.ok) throw new Error(`Telegram HTTP ${response.status}`);
-    const result = await response.json();
-    if (!result.ok) throw new Error('Telegram rejected message');
+    let result = {};
+    try { result = JSON.parse(response.body || '{}'); } catch {}
+    if (response.status < 200 || response.status >= 300) {
+      throw Object.assign(new Error(`Telegram HTTP ${response.status}: ${clean(result.description, 200) || 'unknown error'}`), {code: `HTTP_${response.status}`});
+    }
+    if (!result.ok) {
+      throw Object.assign(new Error(`Telegram rejected message: ${clean(result.description, 200) || 'unknown error'}`), {code: 'TELEGRAM_REJECTED'});
+    }
   }));
-  return {configured: true, delivered: results.filter((result) => result.status === 'fulfilled').length, total: chats.length};
+  const failures = results
+    .filter((result) => result.status === 'rejected')
+    .map((result) => ({
+      code: clean(result.reason?.code || result.reason?.name || 'UNKNOWN', 80),
+      message: clean(result.reason?.message || 'Unknown Telegram error', 240)
+    }));
+  return {
+    configured: true,
+    delivered: results.filter((result) => result.status === 'fulfilled').length,
+    total: chats.length,
+    failures
+  };
 }
 
 async function handleLead(req, res) {
@@ -291,7 +339,8 @@ async function handleLead(req, res) {
       leadId: lead.id,
       durationMs: Date.now() - startedAt,
       storage: path.basename(storagePath),
-      telegramConfigured: telegram.configured
+      telegramConfigured: telegram.configured,
+      telegramFailures: telegram.failures || []
     });
     return json(res, 202, {ok: true, saved: true, delivery: 'pending'});
   }
