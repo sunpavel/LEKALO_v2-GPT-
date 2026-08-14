@@ -67,6 +67,8 @@ const metrikaNoScript = '  <noscript><div><img src="https://mc.yandex.ru/watch/1
 function ensureAnalytics(html) {
   let result = html;
 
+  result = result.replace(/href="\/favicon\.ico(?:\?[^\"]*)?"/g, 'href="/favicon.ico?v=20260814"');
+  result = result.replace(/href="\/?assets\/favicon\.svg(?:\?[^\"]*)?"/g, 'href="/assets/favicon.svg?v=20260814"');
   result = result.replace('loading="eager" fetchpriority="high"><div class="project-caption"', 'loading="lazy" fetchpriority="low"><div class="project-caption"');
 
   if (!result.includes('googletagmanager.com/gtag/js?id=G-CCR5QKD0N4')) {
