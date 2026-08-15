@@ -53,6 +53,18 @@ const googleTagHead = `  <!-- Google tag (gtag.js) -->
     gtag('config', 'G-CCR5QKD0N4');
   </script>`;
 
+const googleTagManagerHead = `  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-58DDGW64');</script>
+  <!-- End Google Tag Manager -->`;
+const googleTagManagerNoScript = `  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-58DDGW64"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->`;
+
 const metrikaHead = `  <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
@@ -78,11 +90,18 @@ function ensureAnalytics(html) {
     result = result.replace(/<head([^>]*)>/i, `<head$1>\n${googleTagHead}`);
   }
 
+  if (!result.includes("'GTM-58DDGW64'")) {
+    result = result.replace(/<head([^>]*)>/i, `<head$1>\n${googleTagManagerHead}`);
+  }
+
   if (!result.includes('mc.yandex.ru/metrika/tag.js?id=111410117')) {
     result = result.replace(/<\/head>/i, `${metrikaHead}\n</head>`);
   }
   if (!result.includes('mc.yandex.ru/watch/111410117')) {
     result = result.replace(/<body([^>]*)>/i, `<body$1>\n${metrikaNoScript}`);
+  }
+  if (!result.includes('ns.html?id=GTM-58DDGW64')) {
+    result = result.replace(/<body([^>]*)>/i, `<body$1>\n${googleTagManagerNoScript}`);
   }
   if (!result.includes('/assets/site-analytics.js')) {
     result = result.replace(/<\/body>/i, '  <script defer src="/assets/site-analytics.js"></script>\n</body>');
@@ -501,8 +520,8 @@ async function routeRequest(req, res) {
   if (!requested || requested.includes('\0')) return send(res, 400, 'Bad Request', 'text/plain; charset=utf-8');
   const file = path.resolve(root, `.${requested}`);
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
-    const notFound = fs.readFileSync(path.join(root, '404.html'));
-    return send(res, 404, notFound, types['.html']);
+    const notFound = fs.readFileSync(path.join(root, '404.html'), 'utf8');
+    return send(res, 404, ensureAnalytics(notFound), types['.html']);
   }
   const type = types[path.extname(file).toLowerCase()] || 'application/octet-stream';
   const source = fs.readFileSync(file);
