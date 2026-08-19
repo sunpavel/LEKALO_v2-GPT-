@@ -18,13 +18,13 @@ const socialPreviewHtml = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta property="og:type" content="website">
-<meta property="og:title" content="LEKALO — частная архитектура и управление строительством">
-<meta property="og:description" content="Индивидуальные загородные дома в Москве и Московской области — от архитектурной концепции до реализации одной командой.">
+<meta property="og:title" content="LEKALO — строительство премиальных домов и управление реализацией">
+<meta property="og:description" content="Премиальные частные дома и резиденции в Москве и Московской области — строительство, технический заказчик и управление реализацией.">
 <meta property="og:image" content="https://raw.githubusercontent.com/sunpavel/LEKALO_v2-GPT-/main/assets/og-lekalo-telegram-v6.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="800">
 <meta property="og:image:height" content="420">
-<title>LEKALO — частная архитектура и управление строительством</title>
+<title>LEKALO — строительство премиальных домов и технический заказчик в Москве</title>
 </head>
 <body></body>
 </html>`;
@@ -48,7 +48,7 @@ const googleTagHead = `  <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-CCR5QKD0N4"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
+    function gtag(){window.dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-CCR5QKD0N4');
   </script>`;
@@ -79,7 +79,115 @@ const metrikaHead = `  <!-- Yandex.Metrika counter -->
   <!-- /Yandex.Metrika counter -->`;
 const metrikaNoScript = '  <noscript><div><img src="https://mc.yandex.ru/watch/111410117" style="position:absolute;left:-9999px" alt=""></div></noscript>';
 
-function ensureAnalytics(html) {
+const GEO_ORGANIZATION_ID = 'https://lklo.ru/#organization';
+const GEO_PERSON_ID = 'https://lklo.ru/komanda/sergey-sokolov/#person';
+const geoPerson = {
+  '@type': 'Person',
+  '@id': GEO_PERSON_ID,
+  name: 'Сергей Соколов',
+  jobTitle: 'Технический руководитель LEKALO',
+  url: 'https://lklo.ru/komanda/sergey-sokolov/',
+  image: 'https://lklo.ru/assets/team-sergey-sokolov-v2.webp',
+  worksFor: {'@id': GEO_ORGANIZATION_ID},
+  knowsAbout: [
+    'технический заказчик',
+    'строительство премиальных частных домов',
+    'генеральный подряд',
+    'управление строительством',
+    'строительный контроль',
+    'реализация архитектурных проектов'
+  ]
+};
+const expertArticlePaths = new Set([
+  '/stati/stoimost-stroitelstva-premialnogo-doma/',
+  '/stati/tekhnicheskiy-zakazchik-v-chastnom-stroitelstve/',
+  '/stati/kak-vybrat-uchastok-pod-stroitelstvo-doma/'
+]);
+
+function addJsonLd(html, id, data) {
+  if (html.includes(`id="${id}"`)) return html;
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  return html.replace(/<\/head>/i, `  <script type="application/ld+json" id="${id}">${json}</script>\n</head>`);
+}
+
+function applyGeoHtml(html, pathname) {
+  let result = html;
+
+  if (pathname === '/') {
+    result = result
+      .replace(/<title>[^<]*<\/title>/i, '<title>LEKALO — строительство премиальных домов и технический заказчик в Москве</title>')
+      .replace(/<meta name="description" content="[^"]*">/i, '<meta name="description" content="LEKALO — строительство и управление реализацией премиальных частных домов и резиденций в Москве и Московской области: от архитектуры до ввода в эксплуатацию.">')
+      .replace(/<meta property="og:title" content="[^"]*">/i, '<meta property="og:title" content="LEKALO — строительство премиальных домов и управление реализацией">')
+      .replace(/<meta property="og:description" content="[^"]*">/i, '<meta property="og:description" content="Премиальные частные дома и резиденции в Москве и Московской области — строительство, технический заказчик и управление реализацией.">');
+
+    result = addJsonLd(result, 'lekalo-geo-home', {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'WebSite',
+          '@id': 'https://lklo.ru/#website',
+          url: 'https://lklo.ru/',
+          name: 'LEKALO',
+          inLanguage: 'ru-RU',
+          publisher: {'@id': GEO_ORGANIZATION_ID}
+        },
+        {
+          '@type': ['Organization', 'HomeAndConstructionBusiness'],
+          '@id': GEO_ORGANIZATION_ID,
+          name: 'LEKALO',
+          url: 'https://lklo.ru/',
+          description: 'Строительство и управление реализацией премиальных частных домов и резиденций от концепции до ввода в эксплуатацию.',
+          areaServed: [
+            {'@type': 'City', name: 'Москва'},
+            {'@type': 'AdministrativeArea', name: 'Московская область'}
+          ],
+          knowsAbout: [
+            'строительство премиальных частных домов',
+            'строительство частных резиденций',
+            'технический заказчик',
+            'генеральный подряд',
+            'управление строительством',
+            'индивидуальное проектирование домов',
+            'аудит строительства'
+          ],
+          employee: {'@id': GEO_PERSON_ID}
+        },
+        geoPerson
+      ]
+    });
+
+    if (!result.includes('data-sergey-profile')) {
+      result = result.replace(
+        '<div class="team-proof">',
+        '<a class="text-link" data-sergey-profile="true" href="/komanda/sergey-sokolov/">Профиль и экспертиза <span>↗</span></a><div class="team-proof">'
+      );
+    }
+  }
+
+  if (expertArticlePaths.has(pathname)) {
+    result = result.replace(
+      /"author":\{"@type":"Organization","name":"LEKALO"\}/,
+      `"author":{"@id":"${GEO_ORGANIZATION_ID}"},"contributor":{"@id":"${GEO_PERSON_ID}"}`
+    );
+    if (!result.includes('rel="author" href="/komanda/sergey-sokolov/"')) {
+      result = result.replace(/<\/head>/i, '  <link rel="author" href="/komanda/sergey-sokolov/">\n</head>');
+    }
+    if (!result.includes('data-expert-link')) {
+      result = result.replace(
+        /(<div class="article-meta">[\s\S]*?<\/div>)/i,
+        (match) => match.replace('</div>', '<span data-expert-link="true">Эксперт: <a href="/komanda/sergey-sokolov/" rel="author">Сергей Соколов</a></span></div>')
+      );
+    }
+    result = addJsonLd(result, 'lekalo-geo-expert', {
+      '@context': 'https://schema.org',
+      '@graph': [geoPerson]
+    });
+  }
+
+  return result;
+}
+
+function ensureAnalytics(html, pathname = '') {
   let result = html;
 
   result = result.replace(/href="\/favicon\.ico(?:\?[^\"]*)?"/g, 'href="/favicon.ico?v=20260814"');
@@ -106,7 +214,7 @@ function ensureAnalytics(html) {
   if (!result.includes('/assets/site-analytics.js')) {
     result = result.replace(/<\/body>/i, '  <script defer src="/assets/site-analytics.js"></script>\n</body>');
   }
-  return result;
+  return applyGeoHtml(result, pathname);
 }
 
 function send(res, status, body, type, cacheControl = 'no-store') {
@@ -490,6 +598,18 @@ async function routeRequest(req, res) {
     res.writeHead(301, {Location: `/privacy/${url.search}`});
     return res.end();
   }
+  if (url.pathname === '/stati') {
+    res.writeHead(301, {Location: `/stati/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/komanda/sergey-sokolov') {
+    res.writeHead(301, {Location: `/komanda/sergey-sokolov/${url.search}`});
+    return res.end();
+  }
+  if (url.pathname === '/stati/kak-vybrat-podryadchika-dlya-stroitelstva-premialnogo-doma') {
+    res.writeHead(301, {Location: `/stati/kak-vybrat-podryadchika-dlya-stroitelstva-premialnogo-doma/${url.search}`});
+    return res.end();
+  }
   if (url.pathname === '/proekty/rezidentsiya-s-basseynom') {
     res.writeHead(301, {Location: `/proekty/rezidentsiya-s-basseynom/${url.search}`});
     return res.end();
@@ -521,12 +641,12 @@ async function routeRequest(req, res) {
   const file = path.resolve(root, `.${requested}`);
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     const notFound = fs.readFileSync(path.join(root, '404.html'), 'utf8');
-    return send(res, 404, ensureAnalytics(notFound), types['.html']);
+    return send(res, 404, ensureAnalytics(notFound, url.pathname), types['.html']);
   }
   const type = types[path.extname(file).toLowerCase()] || 'application/octet-stream';
   const source = fs.readFileSync(file);
   const payload = path.extname(file).toLowerCase() === '.html'
-    ? Buffer.from(ensureAnalytics(source.toString('utf8')), 'utf8')
+    ? Buffer.from(ensureAnalytics(source.toString('utf8'), url.pathname), 'utf8')
     : source;
   const isSearchControlFile = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
   const isSocialPreviewImage = url.pathname === '/assets/hero-concept.jpg'
