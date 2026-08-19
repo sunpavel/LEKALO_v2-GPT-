@@ -152,4 +152,13 @@
       } catch {}
     });
   }
+
+  if (normalizedPath === '/proekty' || normalizedPath.startsWith('/proekty/')) {
+    if (!document.querySelector('script[data-project-proof-loader]')) {
+      const projectProof = document.createElement('script');
+      projectProof.src = '/assets/project-proof.js?v=20260819-1';
+      projectProof.dataset.projectProofLoader = 'true';
+      document.body.appendChild(projectProof);
+    }
+  }
 })();
