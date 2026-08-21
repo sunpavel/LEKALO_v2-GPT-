@@ -39,10 +39,14 @@
     worksFor: {'@id': ORGANIZATION_ID},
     knowsAbout: [
       'технический заказчик',
+      'руководство строительными проектами',
       'строительство премиальных частных домов',
+      'частные резиденции до 5000 м²',
       'генеральный подряд',
-      'управление строительством',
       'строительный контроль',
+      'бассейны и SPA',
+      'климатические системы',
+      'умный дом',
       'реализация архитектурных проектов'
     ]
   };
@@ -103,15 +107,24 @@
     });
 
     const team = document.querySelector('.team-person > div:last-child');
-    if (team && !team.querySelector('[data-sergey-profile]')) {
-      const link = document.createElement('a');
-      link.href = '/komanda/sergey-sokolov/';
-      link.className = 'text-link';
-      link.dataset.sergeyProfile = 'true';
-      link.innerHTML = 'Профиль и экспертиза <span>↗</span>';
+    if (team) {
+      const teamCopy = team.querySelector('p');
+      if (teamCopy) {
+        teamCopy.textContent = 'Профессиональный опыт Сергея до создания LEKALO включает руководство строительством и проектами частных резиденций до 5 000 м², а также инженерно насыщенных wellness-объектов. В LEKALO он отвечает за технический контур реализации на стороне собственника.';
+      }
       const proof = team.querySelector('.team-proof');
-      if (proof) team.insertBefore(link, proof);
-      else team.appendChild(link);
+      if (proof) {
+        proof.innerHTML = '<div><strong>до 5 000 м²</strong><span>частный дом<br>в портфолио</span></div><div><strong>49 469 м²</strong><span>4 wellness-объекта<br>в опыте руководителя</span></div>';
+      }
+      if (!team.querySelector('[data-sergey-profile]')) {
+        const link = document.createElement('a');
+        link.href = '/komanda/sergey-sokolov/';
+        link.className = 'text-link';
+        link.dataset.sergeyProfile = 'true';
+        link.innerHTML = 'Профиль и подтверждённый опыт <span>↗</span>';
+        if (proof) team.insertBefore(link, proof);
+        else team.appendChild(link);
+      }
     }
   }
 
@@ -156,7 +169,7 @@
   if (normalizedPath === '/proekty' || normalizedPath.startsWith('/proekty/')) {
     if (!document.querySelector('script[data-project-proof-loader]')) {
       const projectProof = document.createElement('script');
-      projectProof.src = '/assets/project-proof.js?v=20260819-1';
+      projectProof.src = '/assets/project-proof.js?v=20260821-1';
       projectProof.dataset.projectProofLoader = 'true';
       document.body.appendChild(projectProof);
     }
